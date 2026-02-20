@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد جامعة اليرموك الذكي | Yarmouk University AI Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* الألوان الرسمية لجامعة اليرموك */
+            --yu-dark-blue: #002147;     /* الأزرق الداكن الأساسي */
+            --yu-blue: #0056A6;          /* الأزرق المتوسط */
+            --yu-light-blue: #0077C8;    /* الأزرق الفاتح */
+            --yu-interactive-green: #00A859; /* الأخضر للعناصر التفاعلية */
+            --yu-accent-green: #8DC63F;  /* الأخضر الفاتح للتأكيد */
+            --yu-beige: #F5F1E8;         /* البيج الفاتح */
+            --yu-light-beige: #FAF8F3;   /* البيج الأفتح */
+            --yu-gold: #D4AF37;          /* الذهبي للتفاصيل */
+            --yu-gray: #6C757D;          /* الرمادي للنصوص */
+            --yu-light-gray: #F8F9FA;    /* الرمادي الفاتح للخلفيات */
+            --yu-white: #FFFFFF;
+            --yu-shadow: 0 4px 12px rgba(0, 33, 71, 0.1);
+            --yu-shadow-hover: 0 8px 24px rgba(0, 33, 71, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--yu-light-beige);
+            color: #333;
+            min-height: 100vh;
+            line-height: 1.7;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* ========== HEADER ========== */
+        header {
+            background: linear-gradient(135deg, var(--yu-dark-blue) 0%, var(--yu-blue) 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.05"><text x="50" y="50" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">YU</text></svg>');
+            background-repeat: repeat;
+            z-index: 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            width: 70px;
+            height: 70px;
+            background: var(--yu-white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--yu-dark-blue);
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 3px solid var(--yu-gold);
+            overflow: hidden;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .university-info h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.4rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .university-info p {
+            font-size: 1rem;
+            opacity: 0.9;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .university-contact {
+            display: flex;
+            gap: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            border-right: 3px solid var(--yu-gold);
+        }
+
+        .university-contact p {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1rem;
+        }
+
+        .university-contact i {
+            color: var(--yu-gold);
+            font-size: 1.2rem;
+        }
+
+        /* ========== MAIN LAYOUT ========== */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 992px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ========== INFO PANEL ========== */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.8rem;
+        }
+
+        .info-card {
+            background: var(--yu-white);
+            border-radius: 15px;
+            padding: 1.8rem;
+            box-shadow: var(--yu-shadow);
+            transition: all 0.3s ease;
+            border-right: 5px solid var(--yu-dark-blue);
+            border-top: 1px solid rgba(0, 33, 71, 0.1);
+        }
+
+        .info-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--yu-shadow-hover);
+        }
+
+        .info-card h3 {
+            color: var(--yu-dark-blue);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--yu-beige);
+        }
+
+        .info-card h3 i {
+            color: var(--yu-interactive-green);
+            font-size: 1.5rem;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        /* الأزرار التفاعلية - باللون الأخضر */
+        .quick-btn {
+            background: linear-gradient(to bottom, var(--yu-interactive-green), #008747);
+            border: none;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 3px 6px rgba(0, 168, 89, 0.2);
+        }
+
+        .quick-btn:hover {
+            background: linear-gradient(to bottom, var(--yu-accent-green), var(--yu-interactive-green));
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 168, 89, 0.25);
+        }
+
+        .info-card ul {
+            list-style: none;
+            padding-right: 0;
+        }
+
+        .info-card li {
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.1rem;
+            color: var(--yu-dark-blue);
+        }
+
+        .info-card li i {
+            color: var(--yu-interactive-green);
+            font-size: 1.2rem;
+            width: 24px;
+        }
+
+        /* روابط مهمة */
+        .quick-actions a {
+            display: block;
+            text-decoration: none;
+        }
+
+        /* ========== CHAT CONTAINER ========== */
+        .chat-container {
+            background: var(--yu-white);
+            border-radius: 20px;
+            box-shadow: var(--yu-shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 650px;
+            border: 1px solid rgba(0, 33, 71, 0.1);
+        }
+
+        .chat-header {
+            background: linear-gradient(to right, var(--yu-dark-blue), var(--yu-blue));
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            border-bottom: 4px solid var(--yu-interactive-green);
+        }
+
+        /* أيقونة المساعد الذكي المخصصة */
+        .custom-ai-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--yu-dark-blue), var(--yu-interactive-green));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border: 3px solid white;
+            overflow: hidden;
+            animation: pulse 3s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .custom-ai-icon::before {
+            content: "YU";
+            color: white;
+            font-weight: bold;
+            font-size: 1.8rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .custom-ai-icon::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            top: 10px;
+            right: 10px;
+        }
+
+        .chat-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.8rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            background-color: var(--yu-light-beige);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1.2rem 1.5rem;
+            border-radius: 20px;
+            animation: fadeIn 0.4s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, var(--yu-interactive-green), #008747);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background: var(--yu-white);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+            border: 1px solid rgba(0, 33, 71, 0.15);
+            color: #333;
+        }
+
+        .message-content {
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        .message-time {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-top: 0.6rem;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .user-message .message-time {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ai-message .message-time {
+            color: var(--yu-gray);
+        }
+
+        .chat-input-container {
+            padding: 1.5rem;
+            border-top: 1px solid rgba(0, 33, 71, 0.15);
+            display: flex;
+            gap: 1rem;
+            background: var(--yu-white);
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 1.2rem 1.8rem;
+            border: 2px solid rgba(0, 33, 71, 0.2);
+            border-radius: 50px;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            outline: none;
+            background: var(--yu-light-beige);
+            color: #333;
+        }
+
+        #chat-input:focus {
+            border-color: var(--yu-interactive-green);
+            box-shadow: 0 0 0 3px rgba(0, 168, 89, 0.1);
+        }
+
+        #chat-input::placeholder {
+            color: var(--yu-gray);
+            opacity: 0.7;
+        }
+
+        /* زر الإرسال - باللون الأخضر */
+        #send-btn {
+            background: linear-gradient(to bottom, var(--yu-interactive-green), #008747);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 10px rgba(0, 168, 89, 0.3);
+        }
+
+        #send-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 15px rgba(0, 168, 89, 0.4);
+            background: linear-gradient(to bottom, var(--yu-accent-green), var(--yu-interactive-green));
+        }
+
+        /* ========== TYPING INDICATOR ========== */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 1rem 1.5rem;
+            background: var(--yu-white);
+            border-top: 1px solid rgba(0, 33, 71, 0.1);
+        }
+
+        .typing-indicator span {
+            width: 10px;
+            height: 10px;
+            background: var(--yu-interactive-green);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ========== FEATURES SECTION ========== */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: var(--yu-white);
+            padding: 2.2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: var(--yu-shadow);
+            transition: all 0.4s ease;
+            border-top: 5px solid var(--yu-dark-blue);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--yu-dark-blue), var(--yu-blue));
+        }
+
+        .feature-card:hover {
+            transform: translateY(-12px);
+            box-shadow: var(--yu-shadow-hover);
+        }
+
+        .feature-card i {
+            font-size: 3rem;
+            color: var(--yu-dark-blue);
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--yu-dark-blue), var(--yu-interactive-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-card h3 {
+            color: var(--yu-dark-blue);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .feature-card p {
+            color: var(--yu-gray);
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        /* ========== FOOTER ========== */
+        footer {
+            background: linear-gradient(to right, var(--yu-dark-blue), var(--yu-blue));
+            color: white;
+            padding: 3.5rem 0 2rem;
+            margin-top: 4rem;
+            border-radius: 25px 25px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        footer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.05"><text x="50" y="50" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">YU</text></svg>');
+            background-repeat: repeat;
+            z-index: 0;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-section h4 {
+            margin-bottom: 1.8rem;
+            position: relative;
+            padding-bottom: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .footer-section h4::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--yu-interactive-green);
+        }
+
+        .footer-section p {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .contact-info div {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .contact-info i {
+            color: var(--yu-interactive-green);
+            font-size: 1.2rem;
+            width: 24px;
+        }
+
+        .copyright {
+            text-align: center;
+            padding-top: 2.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ========== RESPONSIVE DESIGN ========== */
+        @media (max-width: 992px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .logo-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .university-contact {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .chat-container {
+                height: 550px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .university-info h1 {
+                font-size: 1.6rem;
+            }
+            
+            .chat-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .custom-ai-icon {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .custom-ai-icon::before {
+                font-size: 1.5rem;
+            }
+            
+            .info-card, .feature-card {
+                padding: 1.5rem;
+            }
+            
+            .main-layout {
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .header-content {
+                gap: 1rem;
+            }
+            
+            .university-contact {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .features {
+                gap: 1.5rem;
+            }
+        }
+
+        /* ========== SCROLLBAR STYLING ========== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--yu-beige);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--yu-dark-blue), var(--yu-interactive-green));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--yu-blue), var(--yu-interactive-green));
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- ========== HEADER ========== -->
+    <header>
+        <div class="container header-content">
+            <div class="logo-container">
+                <div class="logo">
+                    <img src="resources/university_icon/university_icon.png" alt="YU">
+                </div>
+                <div class="university-info">
+                    <h1>مساعد جامعة اليرموك الذكي</h1>
+                    <p>دعم متكامل للطلاب والموظفين والزوار</p>
+                </div>
+            </div>
+            <div class="university-contact">
+                <p><i class="fas fa-phone"></i> 02-7211111</p>
+                <p><i class="fas fa-map-marker-alt"></i> إربد، الأردن</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="container">
+        <div class="main-layout">
+            <!-- ========== INFO PANEL ========== -->
+            <div class="info-panel">
+                <div class="info-card">
+                    <h3><i class="fas fa-bolt"></i> أسئلة سريعة</h3>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="askQuestion('ما هي ساعات العمل في الجامعة؟')">ساعات العمل</button>
+                        <button class="quick-btn" onclick="askQuestion('كيف أتقدم للقبول؟')">التقديم للقبول</button>
+                        <button class="quick-btn" onclick="askQuestion('ما هي تكاليف السكن؟')">تكاليف السكن</button>
+                        <button class="quick-btn" onclick="askQuestion('ما هي التخصصات المتاحة؟')">التخصصات</button>
+                        <button class="quick-btn" onclick="askQuestion('ما هي رسوم التأشيرة؟')">رسوم التأشيرة</button>
+                        <button class="quick-btn" onclick="askQuestion('ما هو موقع الجامعة؟')">موقع الجامعة</button>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-university"></i> معلومات سريعة</h3>
+                    <ul>
+                        <li><i class="fas fa-graduation-cap"></i> 148 برنامجاً أكاديمياً</li>
+                        <li><i class="fas fa-users"></i> 40,000 طالب وطالبة</li>
+                        <li><i class="fas fa-star"></i> تقييم 5 نجوم QS</li>
+                        <li><i class="fas fa-calendar-alt"></i> تأسست عام 1976</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-link"></i> روابط مهمة</h3>
+                    <div class="quick-actions">
+                        <a href="https://yu.edu.jo" target="_blank" class="quick-btn">الموقع الرسمي</a>
+                        <a href="https://olia.yu.edu.jo" target="_blank" class="quick-btn">تقدم للماجستير</a>
+                        <a href="https://www.admhec.gov.jo/Default.aspx" target="_blank" class="quick-btn">القبول الموحد</a>
+                        <a href="http://ar.visitjordan.com/" target="_blank" class="quick-btn">السياحة في الأردن</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== CHAT CONTAINER ========== -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="custom-ai-icon"></div>
+                    <h2>مساعد اليرموك الذكي</h2>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            مرحباً! أنا مساعد جامعة اليرموك الذكي. يمكنني مساعدتك في:
+                            <br>• معلومات القبول والتسجيل
+                            <br>• التخصصات والبرامج الأكاديمية
+                            <br>• السكن والخدمات الطلابية
+                            <br>• المواصلات والموقع
+                            <br>• وأكثر بكثير...
+                        </div>
+                        <div class="message-time">الآن</div>
+                    </div>
+                </div>
+                <div class="typing-indicator" id="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="اكتب سؤالك هنا..." onkeypress="handleKeyPress(event)">
+                    <button id="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== FEATURES ========== -->
+        <div class="features">
+            <div class="feature-card">
+                <i class="fas fa-graduation-cap"></i>
+                <h3>برامج أكاديمية</h3>
+                <p>65 بكالوريوس، 67 ماجستير، 16 دكتوراه، 3 دبلوم عالي</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-star"></i>
+                <h3>تصنيف عالمي</h3>
+                <p>5 نجوم في تصنيف QS وتقدم 200 مرتبة في 2024</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-globe"></i>
+                <h3>طلاب دوليين</h3>
+                <p>40,000 طالب من 45 جنسية مختلفة</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-home"></i>
+                <h3>سكن جامعي</h3>
+                <p>سكن طالبات داخل الحرم الجامعي بأسعار مناسبة</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== FOOTER ========== -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>جامعة اليرموك</h4>
+                    <p>ثاني أقدم وأكبر جامعة رسمية في الأردن، تأسست عام 1976 بمرسوم ملكي سامي.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>معلومات الاتصال</h4>
+                    <div class="contact-info">
+                        <div><i class="fas fa-map-marker-alt"></i> إربد، الأردن</div>
+                        <div><i class="fas fa-phone"></i> 02-7211111</div>
+                        <div><i class="fas fa-envelope"></i> info@yu.edu.jo</div>
+                        <div><i class="fas fa-globe"></i> yu.edu.jo</div>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>ساعات العمل</h4>
+                    <p>الأحد - الخميس</p>
+                    <p>٨ صباحاً - ٤ مساءً</p>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>© 2026 مساعد جامعة اليرموك الذكي. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+        let chatHistory = [];
+
+        function addMessage(content, isUser = false) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            if (isUser) {
+                chatHistory.push({ role: 'user', content: content });
+            } else {
+                chatHistory.push({ role: 'assistant', content: content });
+            }
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'flex';
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            input.value = '';
+            addMessage(message, true);
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                    })
+                });
+                
+                const data = await response.json();
+                hideTypingIndicator();
+                
+                if (data.success) {
+                    addMessage(data.response);
+                } else {
+                    addMessage('عذراً، حدث خطأ في المعالجة. يرجى المحاولة مرة أخرى.');
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.');
+                console.error('Error:', error);
+            }
+        }
+
+        function askQuestion(question) {
+            document.getElementById('chat-input').value = question;
+            sendMessage();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Auto-focus input on load
+        document.getElementById('chat-input').focus();
+    </script>
+</body>
+</html>

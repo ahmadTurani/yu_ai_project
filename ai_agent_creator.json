@@ -1,0 +1,12 @@
+{
+"agent1":{
+	 "activation" : true
+	,"key_words_to_files" : "key_words_to_files.json"
+	,"keys_rules_file" : "keys_rules.txt"
+	,"rules_files" : {"ar":"rules_ar.txt","en":"rules_en.txt"}
+	,"ai_model" : "qwen2.5:7b"
+	,"embedding_file" : "embedding_file.json"
+	,"temperature" : 0.5
+	,"number_of_copies" : 1
+}
+}
