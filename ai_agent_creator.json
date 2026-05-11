@@ -1,12 +1,16 @@
 {
-"agent1":{
-	 "activation" : true
-	,"key_words_to_files" : "key_words_to_files.json"
-	,"keys_rules_file" : "keys_rules.txt"
-	,"rules_files" : {"ar":"rules_ar.txt","en":"rules_en.txt"}
-	,"ai_model" : "qwen2.5:7b"
-	,"embedding_file" : "embedding_file.json"
-	,"temperature" : 0.5
-	,"number_of_copies" : 1
-}
+	"agent1": {
+		"activation": true,
+		"websites_files_config": "websites_files_config.json",
+		"general_embedding_files": "embedding_file.json",
+		"rules_files": {
+			"ar": "rules_ar.txt",
+			"en": "rules_en.txt"
+		},
+		"ai_model": {"fast" : "qwen:4b", "thinker" :	"qwen:7b", "deep_think" : "qwen:14b"},
+		"embedding_model": "qwen3-embedding",
+		"temperature": 0.1,
+		"number_of_copies": 1
+
+	}
 }

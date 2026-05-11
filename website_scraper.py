@@ -1,237 +1,245 @@
+from dataclasses import dataclass
 import requests as rq
 import json
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-def extract_links(html, base_url):
-    soup = BeautifulSoup(html, "html.parser")
-    links = []
+import os
+from bidi.algorithm import PARAGRAPH_LEVELS, get_display
+from requests.sessions import should_bypass_proxies
+import file_extractor
+import logging
 
-    for a in soup.find_all("a", href=True):
-        label = a.get_text(strip=True)
-        href = urljoin(base_url, a["href"])
+logging.basicConfig(level=logging.INFO, filename="info.log")
+class WebsiteScraper():
+    def __init__(self,website_files_config, FORCE_UPDATE_ALL = False, FORCE_STOPE_UPDATE_ALL = False):
+        self.website_files_config = website_files_config 
+        self.FORCE_UPDATE_ALL = self.website_files_config["general_config"]["FORCE_UPDATE_INFO_ALL"]
+        self.FORCE_STOPE_UPDATE_ALL = self.website_files_config["general_config"]["FORCE_STOP_UPDATE_INFO_ALL"]
+        self.visited_urls = set()
+    def detect_site_type(self,html,url):
+        if html :
+            soup = BeautifulSoup(html, "html.parser")
+        else :
+            return "PO"
+        if url.endswith(".pdf"):
+            return "PDF"
+        # FAQ detection
+        if soup.select(".sppb-panel") or soup.select(".accordion"):
+            return "FAQ"
+        return "PO"
 
-        if not label:
-            continue
-
-        links.append({
-            "type": "link",
-            "label": label,
-            "from_page": base_url,
-            "to_page": href
-        })
-    return links
-def detect_location(tag):
-    for parent in tag.parents:
-        if parent.name in ["nav", "header"]:
-            return "header_navigation"
-        if parent.name == "footer":
-            return "footer"
-        if parent.name == "main":
-            return "main_content"
-    return "unknown"
-
-def fetch_html(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; YuAI/1.0)"}
-
-    response = rq.get(url, headers = headers, timeout=10)
-    response.raise_for_status()
-    return response.text
-def chunk(text):
-    lines = text.split(".")
-    return "\\n".join(lines)
-            
-                
-        
-        
-def extract_FAQ(html, base_url):
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Remove noise
-    for tag in soup(["script", "style", "noscript", "iframe", "header", "footer"]):
-        tag.decompose()
-
-    chunks = []
-    panels = soup.select(".sppb-panel")
-
-    for panel in panels:
-        title_tag = panel.select_one(".sppb-panel-title")
-        body_tag = panel.select_one(".sppb-panel-body")
-
-        if not title_tag or not body_tag:
-            continue
-
-        title = title_tag.get_text(strip=True)
-        relevant_urls = {}
-
-        # Extract and replace links
-        for a in body_tag.find_all("a", href=True):
-            anchor_text = a.get_text(strip=True)
-            relevant_urls[anchor_text] = urljoin(base_url, a["href"])
-            a.replace_with(anchor_text)  # Keep anchor text in content
-
-        content = body_tag.get_text(" ", strip=True)
-        
-        if content:
-            chunks.append({
-                "type": "common_information",
+    def extract_links(self, html, base_url, crawler_file_filter):
+        if html is None or html == "":
+            print(f"Skipping BeautifulSoup: No HTML content for {base_url}")
+            return []
+        soup = BeautifulSoup(html, "html.parser")
+        links = []
+        for a in soup.find_all("a", href=True):
+            title = a.get_text(strip=True)
+            href = urljoin(base_url, a["href"])
+            if href in self.visited_urls:
+                continue
+            self.visited_urls.add(href)
+            if not crawler_file_filter:
+                crawler_file_filter = [""]
+            if not href:
+                href = ""
+            if any(substring.lower() in href.lower() for substring in crawler_file_filter) and ( "http"  in href or "https" in href):
+                links.append({
                 "title": title,
-                "content": content,
-                "relevant_urls": relevant_urls,
-                "source": base_url
-            })
-
-    return chunks
-
-def extract_MW(html, base_url):
-    soup = BeautifulSoup(html, "html.parser")
-
-    # remove noise
-    for tag in soup(["script", "style", "noscript", "iframe", "header", "footer"]):
-        tag.decompose()
+                "url": href
+                })
+        print(f"Extracted {len(links)} links from {base_url}")
+        return links
     
-    chunks = []
-    current_title = None
-    current_content = []
-    relevant_urls = {}
+    def fetch_html(self, url):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; YuAI/1.0)"}
+        try:
+            response = rq.get(url, headers = headers, timeout=20)
+            response.encoding = 'utf-8'
+            response.raise_for_status()
+        except rq.HTTPError as e:
+            print(f"HTTP Error for {url}: {e}")
+            return ""
+        except rq.exceptions.ReadTimeout: 
+            print(f"Timeout on {url}")
+            return ""
+        except rq.exceptions.RequestException as e:
+            print(f"Failed to fetch {url}: {e}")
+            return ""
+        return response.text
 
-    for tag in soup.find_all(["h1", "h2", "h3", "p", "li"]):
-        if tag.name in ["h1", "h2", "h3"]:
-            if current_title and current_content:
+    def extract_FAQ(self, html, base_url):
+        soup = BeautifulSoup(html, "html.parser")
+        page_number = {}
+
+
+        # Remove noise
+        for tag in soup(["script", "style", "noscript", "iframe", "header", "footer"]):
+            tag.decompose()
+
+        chunks = []
+        panels = soup.select(".sppb-panel")
+
+        for panel in panels:
+            title_tag = panel.select_one(".sppb-panel-title")
+            body_tag = panel.select_one(".sppb-panel-body")
+
+            if not title_tag or not body_tag:
+                title = "known"
+                continue
+
+            title = title_tag.get_text(strip=True)
+            relevant_urls = {}
+            # Extract and replace links
+            for a in body_tag.find_all("a", href=True):
+                anchor_text = a.get_text(strip=True)
+                relevant_urls[anchor_text] = urljoin(base_url, a["href"])
+                a.replace_with(anchor_text)  # Keep anchor text in content
+
+            content = body_tag.get_text(" ", strip=True)
+            if content:
                 chunks.append({
-                    "type": "content_chunk",
-                    "title": current_title,
-                    "content":current_content,
+                    "title": title,
+                    "content": content,
+                    "page_number": page_number,
                     "relevant_urls": relevant_urls,
                     "source": base_url
                 })
 
-            current_title = tag.get_text(strip=True)
-            current_content = []
-            relevant_urls = {}
-        else:
-            for a in tag.find_all("a", href=True):
-                anchor_text = a.get_text(strip=True)
-                relevant_urls[anchor_text] = urljoin(base_url, a["href"])
-                a.replace_with(anchor_text)  # Keep anchor text in content
-            text = tag.get_text(" ", strip=True)
-            if len(text) > 30:
-                current_content.append(text)
+        return chunks
 
-    # save last chunk
-    if current_title and current_content:
-        chunks.append({
-            "type": "content_chunk",
-            "title": current_title,
-            "content": " ".join(current_content),
+    def extract_MW(self, html, base_url):
+        soup = BeautifulSoup(html, "html.parser")
+        # Remove noise
+        for tag in soup(["script", "style", "noscript", "iframe", "header", "footer", "nav"]):
+            tag.decompose()
+    
+        chunks = []
+        current_title = "General Information" # Default title if page starts with <p>
+        current_content = []
+        current_urls = {} # Store URLs for the CURRENT section only
+
+        # We iterate through all relevant tags
+        for tag in soup.find_all(["h1", "h2", "h3", "p", "li", "div"]):
+            # If we hit a heading, save the previous chunk and reset
+            if tag.name in ["h1", "h2", "h3"]:
+                if current_content:
+                    chunks.append({
+                        "title": current_title,
+                        "content": " ".join(current_content),
+                        "page_number": {},
+                        "relevant_urls": current_urls,
+                        "source": base_url
+                    })
+            
+                # Reset for the new section
+                current_title = tag.get_text(strip=True)
+                current_content = []
+                current_urls = {} # IMPORTANT: Reset the dictionary here!
+            
+            else:
+                # Check for links specifically inside this tag (p, li, or div)
+                for a in tag.find_all("a", href=True):
+                    anchor_text = a.get_text(strip=True)
+                    if anchor_text: # Don't save empty anchors
+                        current_urls[anchor_text] = urljoin(base_url, a["href"])
+                
+                    # We replace the link with text so the 'content' remains readable
+                    a.replace_with(anchor_text)
+
+                text = tag.get_text(" ", strip=True)
+                # Apply your length filter
+                if len(text) > 50:
+                    current_content.append(text)
+
+        # Save the very last chunk after the loop finishes
+        if current_content:
+            chunks.append({
+                "title": current_title,
+                "content": " ".join(current_content),
+                "page_number": {},
+                "relevant_urls": current_urls,
+                "source": base_url
+            })
+
+        return chunks
+
+    def extract_important_text_only(self, html, base_url):
+        if not html:
+            return []
+        relevant_urls = {}
+        paragraphs = []
+        chunks =[]
+        noise = ["Jobs | Scholarships | Students | Staff | Alumni", "وظائف | بعثات | الطلبة | العاملون | الخريجون"]
+        seen = set()
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "noscript", "iframe", "header", "footer", "nav"]):
+            tag.decompose()
+        title_tag = soup.find("h2", {"itemprop": "name"})
+        title = title_tag.get_text(strip=True) if title_tag else "Untitled"
+        for p in soup.find_all("p"):
+        #We check for links specifically inside this tag (p)
+            for img in p.find_all("img", src=True):
+                img.decompose()
+
+
+            for a in p.find_all("a", href=True):
+                anchor_text = a.get_text(strip=True)
+                if anchor_text: # Only map if there is actual text
+                    link = urljoin(base_url, a["href"])
+                    relevant_urls[anchor_text] = link
+                    # Replace the link tag with its text so get_text() sees just the word
+                    a.replace_with(anchor_text)
+
+            line = p.get_text(" ", strip=True)
+            if line and line not in seen and line not in noise:
+                paragraphs.append(line)
+                seen.add(line)
+        text = "\n\n".join(paragraphs)
+        if text:
+            chunks.append({
+            "title": title,
+            "content": text,
+            "page_number": 0,
             "relevant_urls": relevant_urls,
             "source": base_url
         })
+        return chunks
 
-    return chunks
-def extract_news_links(html, base_url):
-    soup = BeautifulSoup(html, "html.parser")
-    news = []
+    def extract_links_and_info(self, html, base_url, crawler_file_filter):
+        links = self.extract_links(html, base_url, crawler_file_filter)
+        text = []
+        for link in links:
+            text.extend(self.orgnized_text(link["url"]))
+            print (link["url"], " loaded")
+        return text
 
-    for a in soup.find_all("a", href=True):
-        title = a.get_text(strip=True)
-        href = urljoin(base_url, a["href"])
+    def orgnized_text(self, url, Type = None, lang = None, crawler_file_filter = [], depth = 0):
 
-        if not title or len(title) < 10:
-            continue
+        if not Type:
+            Type = self.detect_site_type(self.fetch_html(url),url)
+        if Type == "FAQ":
+            orgnized_text = self.extract_FAQ(self.fetch_html(url), url)
+        elif Type == "CR":
+            orgnized_text = self.extract_links_and_info(self.fetch_html(url), url, crawler_file_filter)
 
-        # basic filter for news URLs
-        if "news" in href or "article" in href:
-            news.append({
-                "title": title,
-                "url": href
-            })
+        elif Type == "pdf":
+            response = rq.get(url, timeout=20)
+            temp_filename = "temp_processing.pdf"
+            with open(temp_filename, "wb") as f:
+                f.write(response.content)
+            orgnized_text = file_extractor.process_pdf(temp_filename, url)
+        else:
+            orgnized_text = self.extract_important_text_only(self.fetch_html(url), url)
 
-    return news
-def extract_article(html, base_url):
-    soup = BeautifulSoup(html, "html.parser")
+        if orgnized_text is None:
+            orgnized_text = []
+        
 
-    # Remove noise
-    for tag in soup(["script", "style", "noscript", "iframe", "header", "footer", "nav"]):
-        tag.decompose()
+        return orgnized_text
 
-    # Article title
-    title_tag = soup.find(["h1", "h2"])
-    title = title_tag.get_text(strip=True) if title_tag else "Untitled"
-
-    # Noise filter
-    commone_noise = [
-        "Jobs | Scholarships | Students | Staff | Alumni",
-        "Irbid - Jordan, P.O Box 566 ZipCode 21163",
-        "طلبات القبول الطلبة الدوليين طلبات الموازي طلبات الدراسات العليا طلبات الدبلوم استكمال إجراءات القبول الموحد"        
-    ]
-
-    content = []
-    relevant_urls = {}
-
-    for tag in soup.find_all(["p", "li"]):
-        # Extract URLs
-        for a in tag.find_all("a", href=True):
-            anchor_text = a.get_text(strip=True)
-            relevant_urls[anchor_text] = urljoin(base_url, a["href"])
-            a.replace_with(anchor_text)
-
-        text = tag.get_text(" ", strip=True)
-        if len(text) < 30:
-            continue
-        if text in commone_noise:
-            continue
-        content.append(text)
-
-    return {
-        "type": "news_article",
-        "title": title,
-        "content": "\n".join(content),
-        "relevant_urls": relevant_urls,
-        "source": base_url,
-        "language": "en" if title.isascii() else "ar"
-    }
-
-def crawl_news_page(news_list_url):
-    html = fetch_html(news_list_url)
-
-    news_links = extract_news_links(html, news_list_url)
-
-    articles = []
-
-    for item in news_links:
-        try:
-            print("Fetching:", item["url"])
-            article_html = fetch_html(item["url"])
-            article = extract_article(article_html, item["url"])
-            articles.append(article)
-        except Exception as e:
-            print("Skipped:", item["url"], e)
-
-    return articles
-
-def orgnized_text(url):
-    if url == "https://www.yu.edu.jo/index.php/en/faq-en" or url == "https://www.yu.edu.jo/index.php/faq-ar":
-        orgnized_text = extract_FAQ(fetch_html(url), url)
-    elif url == "https://www.yu.edu.jo/index.php/en/" or url == "https://www.yu.edu.jo/index.php/ar/":
-        orgnized_text = extract_MW(fetch_html(url), url)
-    elif url == "https://www.yu.edu.jo/index.php/en/ann-en" or url == "https://www.yu.edu.jo/index.php/ann-ar":
-        orgnized_text = extract_FAQ(fetch_html(url), url)
-    elif url == "https://www.yu.edu.jo/index.php/en/home-portfolio/yu-news" or url == "https://www.yu.edu.jo/index.php/newsevents/yu-news-ar":
-        orgnized_text = crawl_news_page(url)
-    else :
-        orgnized_text = extract_MW(fetch_html(url), url)
-    return orgnized_text
-
-def save_into_file():
-    websites_files_config =open("websites_files_config.json","r",encoding= "utf-8")
-    websites_files = json.load(websites_files_config)
-    websites_files_config.close
-    for url, file_path in websites_files.items():
-        print(url)
-        with open(file_path, 'w') as json_file:
-            json.dump(orgnized_text(url), json_file, ensure_ascii=False, indent = 2)
-
-save_into_file()
-
-
+    def save_into_file(self,url,file_data):
+        with open(file_data["file"], 'w', encoding='utf-8') as json_file:
+            json.dump(self.orgnized_text(url, file_data["type"], file_data.get("lang"), file_data.get("crawler_file_filter"), file_data.get("depth")), json_file, ensure_ascii=False, indent = 2)

@@ -1,78 +1,65 @@
-import ollama
 import json
 import website_scraper
-
-with open("ai_agent_creator.json", "r", encoding="utf-8") as f:
-    ai_agents_data = json.load(f)
+import ollama
 class FileUpdate ():
-    def __init__(self, key_words_to_files = "key_words_to_files.json"):
-        self.key_words_to_files = key_words_to_files
-        keywords_to_file = open(self.key_words_to_files,"r", encoding="utf-8")
-        self.keywords = json.load(keywords_to_file)
-        keywords_to_file.close()
-    def embeddings_extractor(self):
-        embeddings = []
-        for key, file_path in self.keywords.items():
-            print("keywords loaded:", self.keywords)
-            print("Checking file:", file_path)
-            if file_path.endswith(".json"):
-                file = open(file_path,"r", encoding="utf-8")
-                infos = json.load(file)
-                file.close()
-                count = 0
-                for info in infos :
-                    if isinstance(info["content"], str):
-                        count += 1
-                        lines = []
-                        print(f"paragraph{count} embeded")
-                        lines.append("type:" + info["type"])
-                        lines.append("title:" + info["title"])
-                        lines.append("content:" + info["content"])
-                        lines.append("source:" + info["source"])
-                        lines.append("relevant_urls" + str(info["relevant_urls"]))
-                        new_info = "\n".join(lines)
-                        response = ollama.embed(
-                            model="qwen3-embedding",
-                            input=new_info
-                            
-                            )
-                        embeddings.append({
-                            "embedding": response.embeddings,
-                            "text": new_info,
-                            "type": info["type"],
-                            "title": info["title"],
-                            "source": info["source"],
-                            "relevant_urls": info["relevant_urls"]
-                            })
-                    else:
-                        for paragraph in info["content"]:
-                            count += 1
-                            lines = []
-                            print(f"paragraph{count} embeded")
-                            lines.append("type:" + info["type"])
-                            lines.append("title:" + info["title"])
-                            lines.append("content:" + paragraph)
-                            lines.append("source:" + info["source"])
-                            lines.append("relevant_urls" + str(info["relevant_urls"]))
-                            new_info = "\n".join(lines)
-                            response = ollama.embed(
-                                model="qwen3-embedding",
-                                input=new_info
-                                )
-                            embeddings.append({
-                                "embedding": response.embeddings,
-                                "text": new_info,
-                                "type": info["type"],
-                                "title": info["title"],
-                                "source": info["source"],
-                                "relevant_urls": info["relevant_urls"]
+    def __init__(self, agent_data, websites_files_config):
+        self.general_embedding_file = general_embedding_file = agent_data["general_embedding_file"]
+        self.embedding_model = embedding_model = agent_data["embedding_model"]
+        self.websites_files_config = websites_files_config
+        self.FORCE_UPDATE_ALL= websites_files_config["general_config"]["FORCE_UPDATE_EMBEDD_ALL"]
+        self.FORCE_STOP_UPDATE_ALL= websites_files_config["general_config"]["FORCE_STOP_UPDATE_EMBEDD_ALL"]
 
-                                })
+    def embeddings_extractor(self, file):
+        with open(file, "r", encoding="utf-8") as file_info:
+            infos = json.load(file_info)
+        embeddings = []
+        count = 0
+        for info in infos :
+             count += 1
+             print(f"paragraph{count} embeded")
+             print(len(info["content"]))
+             response = ollama.embed(
+                 model=self.embedding_model,
+                 input=info["content"])
+
+             embeddings.append({
+                 "embedding": response.embeddings,
+                 "text": info["content"],
+                 "title": info["title"],
+                 "source": info["source"],
+                 "relevant_urls": info["relevant_urls"]
+                 })
         return embeddings
-    def save_file(self):
-        website_scraper.save_into_file()
-        json_file = open("embedding_file.json","w", encoding="utf-8")
-        json.dump(self.embeddings_extractor(), json_file)
-        json_file.close()
-files = FileUpdate()
-files.save_file()
+    def embeddings_extractor_if_LE(self, file):
+        with open(file, "r", encoding="utf-8") as file_info:
+            links = json.load(file_info)
+        embeddings = []
+        count = 0
+        for link in links :
+             count += 1
+             print(f"link_chain{count} embeded")
+             print(len(info["content"]))
+             response = ollama.embed(
+                 model=self.embedding_model,
+                 input=info["content"])
+
+             embeddings.append({
+                 "embedding": response.embeddings,
+                 "text": info["content"],
+                 "title": info["title"],
+                 "source": info["source"],
+                 "relevant_urls": info["relevant_urls"]
+                 })
+        return embeddings
+    def save_file(self,data):
+        info = self.embeddings_extractor(data["file"])
+        new_file = data["file"].replace(".json","_embedded.json")
+        with open(new_file, "w", encoding="utf-8") as json_file:
+            json.dump(info, json_file)
+        print(data["file"], ": embedded")
+        return info
+
+
+
+
+
