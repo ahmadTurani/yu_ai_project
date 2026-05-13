@@ -6,13 +6,13 @@ A fully local, privacy-preserving RAG (Retrieval-Augmented Generation) system bu
 
 ## ✨ Features
 
-- 🌐 **Automated data pipeline** — scrapes FAQs, announcements, and news 
-       from 8+ sources and keeps embeddings up to date via a simple update script- 🔍 **FAISS vector search** — fast semantic search across embedded university data
+- 🌐 **Automated data pipeline** — scrapes FAQs, announcements, and news from 8+ sources and keeps embeddings up to date via a simple update script
+- 🔍 **FAISS vector search** — fast semantic search across embedded university data
 - 🤖 **Local LLM** — runs entirely on your machine, no cloud required
 - 🌍 **Bilingual** — full Arabic and English support with language detection
-- ⚙️ **Multi-agent config** — define multiple AI agents with different 
-       rules, models, and data sources *(multi-threading coming soon)*
+- ⚙️ **Multi-agent config** — define multiple AI agents with different rules, models, and data sources *(multi-threading coming soon)*
 - 🔒 **Privacy first** — no data sent to any external service
+
 ---
 
 ## 🏗️ Architecture
@@ -53,6 +53,7 @@ University Website
 | Local LLM | Qwen2.5 7B (via Ollama) |
 | Language Detection | langid |
 | API Server | Flask |
+| Frontend | HTML/CSS/JS (Jinja2 template) |
 | Production Server | Waitress |
 
 ---
@@ -62,11 +63,16 @@ University Website
 ```
 yu-ai/
 ├── app.py                          # Flask API server
+├── agent_creator.py                # AiCreator class — core RAG + LLM logic
 ├── manual_update.py                # Script to update scraped data
 ├── ai_agent_creator.json           # Agent configuration
 ├── websites_files_config.json      # Scraper & embedding config
-├── rules_ar.txt                    # Arabic agent rules/prompt
-├── rules_en.txt                    # English agent rules/prompt
+├── embedding_file.json             # General/fallback embeddings
+├── rules_ar.txt                    # Arabic agent rules/system prompt
+├── rules_en.txt                    # English agent rules/system prompt
+├── error.log                       # Auto-generated error log
+├── templates/
+│   └── yu_ai.html                  # Web UI served at /
 └── real_time_information/          # Scraped & embedded data
     ├── questions.json
     ├── questions_arabic.json
@@ -158,8 +164,8 @@ ollama pull qwen3-embedding
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/yu-ai.git
-cd yu-ai
+git clone https://github.com/ahmadTurani/yu_ai_project.git
+cd yu_ai_project
 pip install -r requirements.txt
 ```
 
@@ -182,6 +188,55 @@ python app.py
 ```bash
 waitress-serve --host=0.0.0.0 --port=5000 app:app
 ```
+
+The web UI will be available at `http://localhost:5000`. just make sure the coments are removed and redis is activated correctly
+
+---
+
+## 🌐 API Reference
+
+### `GET /`
+Serves the web UI (`templates/yu_ai.html`).
+
+---
+
+### `POST /ask`
+Sends a question to the active AI agent and returns an answer.
+
+**Request body (JSON):**
+```json
+{
+    "message": "ما هي متطلبات التسجيل؟",
+    "speed": "fast"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | Yes | The user's question in Arabic or English. Max 1500 characters. |
+| `speed` | string | No | `"fast"` (default) or `"slow"`. Controls response generation mode. |
+
+**Response (JSON):**
+```json
+{
+    "success": true,
+    "response": "يمكنك التسجيل عبر البوابة الإلكترونية..."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | bool | `true` if the request was handled, `false` on error |
+| `response` | string | The AI's answer, or an Arabic error message if something went wrong |
+
+**Error responses:**
+
+| Cause | Response |
+|-------|----------|
+| Empty or invalid message | `{ "success": false, "response": "يرجى إدخال سؤال." }` |
+| Message exceeds 1500 chars | `{ "success": false, "response": "الرسالة طويلة جداً" }` |
+| All agents busy (timeout 20s) | `{ "success": false, "response": "الخادم مشغول حالياً، حاول لاحقاً" }` |
+| Internal server error | `{ "success": false, "response": "حدث خطأ داخلي" }` |
 
 ---
 
@@ -213,7 +268,7 @@ This project is built as a **reusable RAG framework**. To adapt it:
 3. Run `manual_update.py` to scrape and embed your data
 4. Start the server
 
-No code changes needed.
+You may need to attach it to the new front end if you want other than that no no code changes needed.
 
 ---
 
