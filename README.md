@@ -6,13 +6,13 @@ A fully local, privacy-preserving RAG (Retrieval-Augmented Generation) system bu
 
 ## ✨ Features
 
-- 🌐 **Live data scraping** — automatically pulls FAQs, announcements, and news from 8+ sources
-- 🔍 **FAISS vector search** — fast semantic search across embedded university data
+- 🌐 **Automated data pipeline** — scrapes FAQs, announcements, and news 
+       from 8+ sources and keeps embeddings up to date via a simple update script- 🔍 **FAISS vector search** — fast semantic search across embedded university data
 - 🤖 **Local LLM** — runs entirely on your machine, no cloud required
 - 🌍 **Bilingual** — full Arabic and English support with language detection
-- ⚙️ **Multi-agent config** — define multiple AI agents with different rules, models, and data sources
+- ⚙️ **Multi-agent config** — define multiple AI agents with different 
+       rules, models, and data sources *(multi-threading coming soon)*
 - 🔒 **Privacy first** — no data sent to any external service
-
 ---
 
 ## 🏗️ Architecture
