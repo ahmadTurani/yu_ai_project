@@ -1,27 +1,87 @@
-## Yu AI Project
-    This project automatically scrapes and updates data from the Yarmouk University website,
-    including FAQs, announcements, and general The data is converted into embeddings and used for retrieval-augmented generation (RAG) to answer user queries using ai generated response to be as helpful as possible.
-    The system supports multiple configurable AI agents, each with different rules, models, and data sources.
-Table of Contents
-    1. [Configuration](#configuration)
-    2. [Usage](#usage)
-    3. [Contributing](#contributing)
+# 🎓 Yu AI — Yarmouk University AI Assistant
 
-## Configuration
+A fully local, privacy-preserving RAG (Retrieval-Augmented Generation) system built for Yarmouk University. It scrapes live data from the university website, embeds it using local models, and answers student queries in **Arabic and English** — with zero hallucination, zero API keys, and zero data leaving your server.
 
-There are **two configuration files** you will work with:
+---
 
-1. **`ai_agent_creator.json`**  
-   - This is the brain of the system.  
-   - You can create a new AI agent with custom rules and files it gets its information from.
+## ✨ Features
 
-2. **`websites_files_config.json`**  
-   - This file controls the scraper and embedding system.  
-   - You can create a custom version for another AI agent, **but the structure must remain the same**.
+- 🌐 **Live data scraping** — automatically pulls FAQs, announcements, and news from 8+ sources
+- 🔍 **FAISS vector search** — fast semantic search across embedded university data
+- 🤖 **Local LLM** — runs entirely on your machine, no cloud required
+- 🌍 **Bilingual** — full Arabic and English support with language detection
+- ⚙️ **Multi-agent config** — define multiple AI agents with different rules, models, and data sources
+- 🔒 **Privacy first** — no data sent to any external service
 
+---
 
+## 🏗️ Architecture
 
-**`ai_agent_creator.json`**
+```
+University Website
+       │
+       ▼
+  BeautifulSoup Scraper
+  (FAQs, News, Announcements)
+       │
+       ▼
+  Ollama Embeddings
+  (qwen3-embedding)
+       │
+       ▼
+   FAISS Index
+  (Vector Search)
+       │
+  User Question ──► Embed Query ──► Search Index ──► Retrieve Chunks
+                                                            │
+                                                            ▼
+                                                     Qwen2.5 7B (Local LLM)
+                                                            │
+                                                            ▼
+                                                     Answer in Arabic/English
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Web Scraping | BeautifulSoup |
+| Embeddings | Ollama + qwen3-embedding |
+| Vector Search | FAISS |
+| Local LLM | Qwen2.5 7B (via Ollama) |
+| Language Detection | langid |
+| API Server | Flask |
+| Production Server | Waitress |
+
+---
+
+## 📁 Project Structure
+
+```
+yu-ai/
+├── app.py                          # Flask API server
+├── manual_update.py                # Script to update scraped data
+├── ai_agent_creator.json           # Agent configuration
+├── websites_files_config.json      # Scraper & embedding config
+├── rules_ar.txt                    # Arabic agent rules/prompt
+├── rules_en.txt                    # English agent rules/prompt
+└── real_time_information/          # Scraped & embedded data
+    ├── questions.json
+    ├── questions_arabic.json
+    ├── announcements.json
+    └── ...
+```
+
+---
+
+## ⚙️ Configuration
+
+There are **two configuration files**:
+
+### 1. `ai_agent_creator.json` — Agent Configuration
+
 ```json
 {
     "agent1": {
@@ -40,91 +100,126 @@ There are **two configuration files** you will work with:
 }
 ```
 
-- Users can **copy this JSON directly** into a file without causing errors.  
+| Key | Description |
+|-----|-------------|
+| `activation` | Enable or disable this agent |
+| `websites_files_config` | Path to the scraper config file |
+| `general_embedding_file` | Fallback embedding file |
+| `rules_files` | Language-specific system prompt files |
+| `ai_model` | Ollama model used for answering |
+| `embedding_model` | Ollama model used for embeddings |
+| `temperature` | 0 = strict, 0.5 = balanced, 1 = creative |
+| `number_of_copies` | Concurrent users this agent can serve |
 
+---
 
-### Explanation of `ai_agent_creator.json` keys
+### 2. `websites_files_config.json` — Scraper Configuration
 
-- **`activation`**: Should this agent be active? `true` or `false`.
-- **`websites_files_config`**: Links to the scraper and embedding system.
-- **`minimum_key_similarity`**: Threshold for keyword search before full search fallback.
-- **`general_embedding_file`**: Embedding file used if threshold is not reached.
-- **`rules_files`**: Language-specific rules (`ar` for Arabic, `en` for English) this can take more than two language if you want add more.
-- **`ai_model`**: Model the agent uses for conversation.
-- **`embedding_model`**: Model used for creating embeddings.
-- **`temperature`**: Creativity/variability of the agent (0 = strict, 0.5 = balanced, 1 = very creative).
-- **`number_of_copies`**: How many concurrent users this agent can serve.
-### end
-
-**`websites_files_config.json`** 
 ```json
-{  
-    "https://www.yu.edu.jo/index.php/ann-ar?limit=0&start=0": {
-    "update_embedd": true,
-    "crawler_file_filter": [ "ann-ar/" ],
-    "update": true,
-    "type": "CR",
-    "file": "real_time_information/annucments_arabic.json"
-  }
+{
+    "https://www.yu.edu.jo/index.php/faq-ar": {
+        "update_embedd": true,
+        "update_info": true,
+        "type": "FAQ",
+        "file": "real_time_information/questions_arabic.json",
+        "language": "ar"
+    }
 }
 ```
-### Explanation of `websites_files_config.json` keys
-**'update_embedd'**: If true, the system updates the embeddings for this file when you run update_file.py.
 
-**'update'**: If true, the scraper will fetch new data from the website automatically.
+| Key | Description |
+|-----|-------------|
+| `update_embedd` | Re-embed this source on next update |
+| `update_info` | Re-scrape this source on next update |
+| `type` | Scraper type: `FAQ`, `CR` (crawler), or `PO` (paragraphs only) |
+| `file` | Path to save scraped data |
+| `language` | Language of the source (`ar` or `en`) |
+| `crawler_file_filter` | *(CR type only)* Only store URLs matching these patterns |
 
-**'type'**: Type of scraper used. Different types may require different scraping methods and file formats.
+**Scraper types:**
+- `FAQ` — Frequently Asked Questions page format
+- `CR` — Full website crawler with optional URL filtering
+- `PO` — Paragraphs only format
 
-**'includes several keys'**.
+---
 
-    1-"FAQ" Frequently asked question website format
+## 🚀 Getting Started
 
-    2-"PO" paragraphs only format
-            
-    5-"CR" crawling websites in the website
+### Prerequisites
 
-**'crawler_file_filter'**: a special list you add Filters the content the crawler will save. Only files matching these patterns are stored and there is no need to add this if the ttyoe is not "CR"
-**'example'** :
-    -crawler_file_filter:[".pdf"]
-    -that will only take pdf files 
+- Python 3.10+
+- [Ollama](https://ollama.com) installed and running
+- Required models pulled:
+```bash
+ollama pull qwen2.5:7b
+ollama pull qwen3-embedding
+```
 
-**'file'**: Path where the scraped data will be saved.
+### Installation
 
-## Usage
+```bash
+git clone https://github.com/yourusername/yu-ai.git
+cd yu-ai
+pip install -r requirements.txt
+```
 
-### how to start the server
-1. Development Mode
+### Scrape & Embed Data
 
-    Run the app normally for testing:
-    ```bash
-    python app.py
-    ```
-    Then open the website in your browser.
-2. Production Mode
+```bash
+python manual_update.py
+```
 
-    For production, use Waitress (more stable and secure):
-    
-    ```bash
-    waitress-serve --host=0.0.0.0 --port=5000 app:app
-    ```
-    host=0.0.0.0 allows access from any device
+This scrapes all sources marked `update_info: true` and re-embeds all sources marked `update_embedd: true`.
 
-    port=5000 is the default port used by the app
+### Run the Server
 
-### Updating Data
-to update the stored information:
+**Development:**
+```bash
+python app.py
+```
 
-**Update**
+**Production:**
+```bash
+waitress-serve --host=0.0.0.0 --port=5000 app:app
+```
 
-    Run:
-    ```bash
-    py -3.10 manual_update.py
-    ```
-This updates all allowed entries in websites_files_config.json.
+---
 
-## Contributors
+## 🔧 Adding a New Data Source
 
-This project was created by Ahmad Najdat Turani.
+1. Open `websites_files_config.json`
+2. Add a new entry:
+```json
+"https://yoursite.com/page": {
+    "update_embedd": true,
+    "update_info": true,
+    "type": "FAQ",
+    "file": "real_time_information/your_file.json",
+    "language": "en"
+}
+```
+3. Run `python manual_update.py`
 
-Contributions are welcome!
-If you’d like to improve the project, feel free to submit changes or suggestions.
+That's it — the new source is scraped, embedded, and searchable.
+
+---
+
+## 🌍 Adapting for Another University or Organization
+
+This project is built as a **reusable RAG framework**. To adapt it:
+
+1. Replace the URLs in `websites_files_config.json` with your organization's pages
+2. Update the rules in `rules_ar.txt` and `rules_en.txt` with your own system prompt
+3. Run `manual_update.py` to scrape and embed your data
+4. Start the server
+
+No code changes needed.
+
+---
+
+## 👤 Author
+
+**Ahmad Najdat Turani**  
+Computer Science Student — Yarmouk University  
+
+Contributions are welcome — feel free to open an issue or submit a pull request.
