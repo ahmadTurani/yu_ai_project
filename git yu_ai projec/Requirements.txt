@@ -1,0 +1,14 @@
+flask
+flask-cors
+faiss-cpu
+langid
+waitress
+beautifulsoup4
+requests
+ollama
+numpy
+python-bidi
+ 
+# Optional: uncomment for production rate limiting
+# redis
+# flask-limiter
