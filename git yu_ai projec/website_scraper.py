@@ -23,7 +23,6 @@ class WebsiteScraper():
             return "PO"
         if url.endswith(".pdf"):
             return "PDF"
-        # FAQ detection
         if soup.select(".sppb-panel") or soup.select(".accordion"):
             return "FAQ"
         return "PO"
@@ -37,9 +36,7 @@ class WebsiteScraper():
         for a in soup.find_all("a", href=True):
             title = a.get_text(strip=True)
             href = urljoin(base_url, a["href"])
-            if href in self.visited_urls:
-                continue
-            self.visited_urls.add(href)
+
             if not crawler_file_filter:
                 crawler_file_filter = [""]
             if not href:
@@ -217,6 +214,9 @@ class WebsiteScraper():
         return text
 
     def orgnized_text(self, url, Type = None, lang = None, crawler_file_filter = [], depth = 0):
+        if url in self.visited_urls:
+            return []
+        self.visited_urls.add(url)
 
         if not Type:
             Type = self.detect_site_type(self.fetch_html(url),url)

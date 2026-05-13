@@ -1,61 +1,69 @@
 {
   "general_config": {
-    "FORCE_UPDATE_INFO_ALL": false,
-    "FORCE_STOP_UPDATE_INFO_ALL": true,
+    "FORCE_UPDATE_INFO_ALL": true,
+    "FORCE_STOP_UPDATE_INFO_ALL": false,
     "FORCE_UPDATE_EMBEDD_ALL": true,
     "FORCE_STOP_UPDATE_EMBEDD_ALL": false
   },
   "https://www.yu.edu.jo/index.php/en/faq-en": {
     "update_embedd": true,
-    "update_info": false,
+    "update_info": true,
     "type": "FAQ",
-    "file": "real_time_information/questions.json"
+    "file": "real_time_information/questions.json",
+    "language": "en"
   },
   "https://www.yu.edu.jo/index.php/faq-ar": {
     "update_embedd": true,
-    "update_info": false,
+    "update_info": true,
     "type": "FAQ",
-    "file": "real_time_information/questions_arabic.json"
+    "file": "real_time_information/questions_arabic.json",
+    "language": "ar"
   },
   "https://www.yu.edu.jo/index.php/en/": {
-    "update_embedd": true,
+    "update_embedd": false,
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/main_website.json"
+    "file": "real_time_information/main_website.json",
+    "language": "en"
   },
   "https://www.yu.edu.jo/index.php/ar/": {
     "update_embedd": false,
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/main_website_arabic.json"
+    "file": "real_time_information/main_website_arabic.json",
+    "language": "ar"
   },
   "https://www.yu.edu.jo/index.php/en/ann-en?limit=0&start=0": {
-    "update_embedd": true,
+    "update_embedd": false,
     "crawler_file_filter": [ "ann-en/" ],
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/annucments.json"
+    "file": "real_time_information/annucments.json",
+    "language": "en"
   },
   "https://www.yu.edu.jo/index.php/ann-ar?limit=0&start=0": {
-    "update_embedd": true,
+    "update_embedd": false,
     "crawler_file_filter": [ "ann-ar/" ],
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/annucments_arabic.json"
+    "file": "real_time_information/annucments_arabic.json",
+    "language": "ar"
   },
   "https://www.yu.edu.jo/index.php/en/home-portfolio/yu-news": {
-    "update_embedd": true,
+    "update_embedd": false,
     "crawler_file_filter": [ "newsen", "community-service", "new" ],
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/news.json"
+    "file": "real_time_information/news.json",
+    "language": "en"
   },
   "https://www.yu.edu.jo/index.php/newsevents/yu-news-ar": {
-    "update_embedd": true,
+    "update_embedd": false,
     "crawler_file_filter": [ "newarcat", "campusnews", "new" ],
     "update_info": false,
     "type": "CR",
-    "file": "real_time_information/news_arabic.json"
+    "file": "real_time_information/news_arabic.json",
+    "language": "ar"
   }
 
 }

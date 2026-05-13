@@ -3,8 +3,8 @@ import website_scraper
 import ollama
 class FileUpdate ():
     def __init__(self, agent_data, websites_files_config):
-        self.general_embedding_file = general_embedding_file = agent_data["general_embedding_file"]
-        self.embedding_model = embedding_model = agent_data["embedding_model"]
+        self.general_embedding_files = agent_data["general_embedding_files"]
+        self.embedding_model = agent_data["embedding_model"]
         self.websites_files_config = websites_files_config
         self.FORCE_UPDATE_ALL= websites_files_config["general_config"]["FORCE_UPDATE_EMBEDD_ALL"]
         self.FORCE_STOP_UPDATE_ALL= websites_files_config["general_config"]["FORCE_STOP_UPDATE_EMBEDD_ALL"]

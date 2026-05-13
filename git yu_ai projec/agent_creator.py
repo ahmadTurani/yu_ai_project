@@ -1,3 +1,5 @@
+import re
+
 import ollama
 import json
 import numpy as np
@@ -9,20 +11,40 @@ def detect_language(text):
     return lang
 
 class AiCreator:
-    def __init__ (self, rules_files, ai_model, embedding_file, temperature):
+    def __init__ (self, rules_files, ai_model, embedding_files, temperature,context_window=8024):
         self.rules_files = rules_files
         self.temperature = temperature
         self.ai_model = ai_model
-        f = open(embedding_file,"r", encoding="utf-8")
-        self.embeddings = json.load(f)
-        f.close
-        embeddings_list = [item["embedding"] for item in self.embeddings]
-        self.vector_matrix = np.array(embeddings_list).astype('float32')
-        self.vector_matrix = np.squeeze(self.vector_matrix, axis= 1)
-        faiss.normalize_L2(self.vector_matrix)
-        dimensions = self.vector_matrix.shape[1]
-        self.index = faiss.IndexFlatIP(dimensions)
-        self.index.add(self.vector_matrix)        
+        self.indices = self.make_a_index_for_alllangs(embedding_files)
+        self.context_window = context_window
+    
+    def make_a_index_for_alllangs(self, embedding_files):
+        indices = {}
+        for lang, embedding_file in embedding_files.items():
+            indices[lang] = self.make_fiass_index(embedding_file)
+            
+        return indices
+
+    def make_fiass_index(self, embedding_file):
+        # open the embedding file and load the embeddings
+        with open(embedding_file,"r", encoding="utf-8") as f:
+            embeddings = json.load(f)
+
+        #create a matrix of the embeddings 
+        embeddings_list = [item["embedding"] for item in embeddings]
+
+        # convert the list of embeddings to a numpy array and ensure it's 2D
+        vector_matrix = np.array(embeddings_list).astype('float32')
+        vector_matrix = np.squeeze(vector_matrix, axis= 1)
+
+        # normalize the vectors in the matrix
+        faiss.normalize_L2(vector_matrix)
+
+        # create a FAISS index and add the vectors to it
+        dimensions = vector_matrix.shape[1]
+        index = faiss.IndexFlatIP(dimensions)
+        index.add(vector_matrix)
+        return index, embeddings
     def embed_messages(self,message_content):
         response = ollama.embed(
             model="qwen3-embedding",
@@ -34,7 +56,7 @@ class AiCreator:
         faiss.normalize_L2(query_vec)
         return query_vec
 
-    def find_relvant_info(self, message_content, number_of_retrievaled_info=2):
+    def find_relvant_info(self, message_content, number_of_retrievaled_info=2, lang=None):
         # 1. Embed the user's message using Ollama
         response = ollama.embed(model="qwen3-embedding", input=message_content)
         query_vec = np.array(response.embeddings).astype('float32').reshape(1, -1)
@@ -44,7 +66,10 @@ class AiCreator:
 
         # 3. Search the FAISS Index
         # D is a list of scores, I is a list of row indices
-        scores, row_indices = self.index.search(query_vec, number_of_retrievaled_info)
+        if not lang or lang not in self.indices:
+            lang = next(iter(self.indices))
+        index = self.indices[lang][0]  # Get the FAISS index for the specified language
+        scores, row_indices = index.search(query_vec, number_of_retrievaled_info)
 
         # 4. Format the output to match your old "unique_similarities" style
         results = []
@@ -52,7 +77,7 @@ class AiCreator:
             idx = row_indices[0][i]
             if idx != -1:
                 score = float(scores[0][i])
-                chunk = self.embeddings[idx]
+                chunk = self.indices[lang][1][idx]
                 
                 results.append({
                     "score": score,
@@ -75,6 +100,7 @@ class AiCreator:
                 ],
             options={
                 'temperature': self.temperature,
+                'num_ctx': self.context_window
                 })
         
         return response['message']['content']
@@ -101,32 +127,51 @@ class AiCreator:
 
         return "\n".join(lines)
 
-    def run_the_ai(self,message_content,speed="fast"):
-        message_lang = detect_language(message_content)
-        rules_f = None
-        for lang, rules_file in self.rules_files.items():
-            if lang == message_lang:
-                rules_f = open(rules_file,"r", encoding="utf-8")
-                break
-        if rules_f == None:
-            rules_f = open(self.rules_files["en"],"r", encoding="utf-8")
-        rules = rules_f.read()
-        rules_f.close()
-        retrieved_chunks = self.find_relvant_info(message_content)
+    def run_the_ai(self, message_content, speed="fast"):
+        message_lang = detect_language(message_content) or "ar" # Default to Arabic
+    
+        # تحسين قراءة ملف القوانين
+        rules_path = self.rules_files.get(message_lang, self.rules_files["en"])
+        with open(rules_path, "r", encoding="utf-8") as f:
+            rules = f.read()
+
+        retrieved_chunks = self.find_relvant_info(message_content, lang=message_lang)
 
         if not retrieved_chunks:
-            context = "No relevant information found."
+            context = "عذراً، لا توجد معلومات كافية في قاعدة البيانات للإجابة على هذا السؤال."
         else:
-            context = "\n\n".join(
-                f"""title: {chunk['title']}
-                sorce: {chunk['source']}
-                content: {chunk['text']}
-                relevant urls: {chunk["relevant_urls"]} """
-            for chunk in retrieved_chunks )
+            formatted_chunks = []
+            for i, chunk in enumerate(retrieved_chunks, 1):
+                urls = chunk.get("relevant_urls", {})
 
-        system_prompt = context + "\n" + rules 
-        print(system_prompt)
+                # Fix: Clean URLs before formatting
+                cleaned_urls = {}
+                for k, v in urls.items():
+                    # Extract only the actual URL part (stop at any non-URL character)
+                    url_match = re.match(r'(https?://[^\s•]+)', str(v))
+                    cleaned_urls[k] = url_match.group(1) if url_match else v
+
+                urls_formatted = "\n".join([f"  * {k}: {v}" for k, v in cleaned_urls.items()]) if cleaned_urls else "لا توجد روابط."
             
-        answer = self.make_a_ai_respon(system_prompt, message_content, speed)
-        print(answer)
+                block = (
+                    f"### المرجع [{i}]: {chunk['title']}\n"
+                    f"- المصدر: {chunk['source']}\n"
+                    f"- النص الحرفي: {chunk['text']}\n"
+                    f"- الروابط المتاحة:\n{urls_formatted}\n"
+                    f"{'-' * 30}"
+                )
+                formatted_chunks.append(block)
+        
+            context = "\n\n".join(formatted_chunks)
+
+        # بناء البرومبت النهائي (الاستراتيجية المطورة)
+        final_system_prompt = (
+            f"{rules}\n\n"
+            f"{context}\n\n"
+            f"تنبيه هام للمساعد: التزم بالقوانين السابقة حرفياً، خاصة القاعدة رقم 9 و10."
+        )
+        print("---- System Prompt Preview ----")
+        print(final_system_prompt)
+        print("--- System Prompt Sent ---") # للتصحيح فقط
+        answer = self.make_a_ai_respon(final_system_prompt, message_content, speed)
         return answer

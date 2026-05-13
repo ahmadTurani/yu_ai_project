@@ -22,7 +22,7 @@ for agent_name, agent_config in ai_agents_data.items():
             agent_copy = yp.AiCreator(
                 agent_config["rules_files"],
                 agent_config["ai_model"],
-                agent_config["general_embedding_file"],
+                agent_config["general_embedding_files"],
                 agent_config["temperature"]
             )
             agent_pool.put(agent_copy)
@@ -82,4 +82,4 @@ def ask():
 if __name__ == '__main__':
     print("RUNNING IN TEST MODE - http://127.0.0.1:5000")
     app.run(host='127.0.0.1', debug=False)
-    logging.info("Starting Yarmouk University AI Assistant server...")
+    logging.info("Starting Yarmouk University AI Assistant server...")    
